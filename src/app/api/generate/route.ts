@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { text } = await generateText({
-      model: openai("gpt-4o-mini"),
+      model: openai(process.env.ARK_MODEL || "ep-20260524015402-clmjj"),
       prompt,
       maxOutputTokens: 2000,
     });
