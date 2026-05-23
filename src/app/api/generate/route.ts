@@ -1,5 +1,3 @@
-import { generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -11,7 +9,8 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
-    const baseURL = process.env.OPENAI_BASE_URL;
+    const baseURL = process.env.OPENAI_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3";
+    const model = process.env.ARK_MODEL || "ep-20260524015402-clmjj";
 
     if (!apiKey) {
       return NextResponse.json(
@@ -20,16 +19,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = createOpenAI({
-      apiKey,
-      baseURL: baseURL || undefined,
+    const response = await fetch(`${baseURL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 2000,
+      }),
     });
 
-    const { text } = await generateText({
-      model: openai(process.env.ARK_MODEL || "ep-20260524015402-clmjj"),
-      prompt,
-      maxOutputTokens: 2000,
-    });
+    if (!response.ok) {
+      const err = await response.text();
+      return NextResponse.json({ error: `AI服务错误: ${err}` }, { status: 500 });
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || "生成结果为空";
 
     return NextResponse.json({ text });
   } catch (error: unknown) {
